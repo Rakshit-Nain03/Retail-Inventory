@@ -1,0 +1,754 @@
+<div class="app">
+
+
+  <aside class="sidebar">
+    <div class="logo">
+      <h2>Inventory</h2>
+      <span>Retail Management</span>
+    </div>
+
+    <nav>
+      <button
+        *ngFor="let page of pages"
+        [class.active]="activePage === page"
+        (click)="activePage = page">
+        {{ page }}
+      </button>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <header class="topbar">
+      <div>
+        <h1>{{ activePage }}</h1>
+        <p>Retail Inventory Management System</p>
+      </div>
+
+      <button class="refresh-btn" (click)="loadData()">
+        ↻ Refresh
+      </button>
+    </header>
+
+    <!-- MESSAGES -->
+    <div *ngIf="message" class="success-message">
+      {{ message }}
+    </div>
+
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+
+    <!-- DASHBOARD -->
+    <ng-container *ngIf="activePage === 'Dashboard'">
+
+      <div class="stats">
+
+        <div class="stat-card">
+          <h3>Total Products</h3>
+          <p>{{ products.length }}</p>
+        </div>
+
+        <div class="stat-card">
+          <h3>Total Stock</h3>
+          <p>{{ totalStock }}</p>
+        </div>
+
+        <div class="stat-card">
+          <h3>Active Orders</h3>
+          <p>{{ activeOrders }}</p>
+        </div>
+
+        <div class="stat-card">
+          <h3>Low Stock</h3>
+          <p>{{ lowStock.length }}</p>
+        </div>
+
+      </div>
+
+      <div class="dashboard-grid">
+
+        <div class="panel">
+          <h2>Products</h2>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>SKU</th>
+                  <th>Price</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr *ngFor="let product of products">
+                  <td>{{ product.id }}</td>
+                  <td>{{ product.name }}</td>
+                  <td>{{ product.sku }}</td>
+                  <td>₹{{ product.price }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Low Stock</h2>
+
+          <p *ngIf="lowStock.length === 0" class="empty">
+            No low-stock products.
+          </p>
+
+          <div
+            class="list-item"
+            *ngFor="let item of lowStock">
+
+            <strong>
+              {{ getProductName(item.product?.id) }}
+            </strong>
+
+            <span>
+              Qty: {{ item.quantity }}
+            </span>
+
+          </div>
+        </div>
+
+      </div>
+
+      <div class="dashboard-grid">
+
+        <div class="panel">
+          <h2>Warehouses</h2>
+
+          <div
+            class="list-item"
+            *ngFor="let warehouse of warehouses">
+
+            <strong>{{ warehouse.name }}</strong>
+            <span>{{ warehouse.location }}</span>
+
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Recent Orders</h2>
+
+          <div
+            class="list-item"
+            *ngFor="let order of orders.slice(-5).reverse()">
+
+            <strong>{{ order.orderNumber }}</strong>
+
+            <span
+              class="order-status"
+              [ngClass]="order.status?.toLowerCase()">
+
+              {{ order.status }}
+
+            </span>
+
+          </div>
+        </div>
+
+      </div>
+
+    </ng-container>
+
+
+    <!-- PRODUCTS -->
+    <ng-container *ngIf="activePage === 'Products'">
+
+      <div class="panel">
+        <h2>Products</h2>
+
+        <div class="table-wrap">
+          <table>
+
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>SKU</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr *ngFor="let product of products">
+                <td>{{ product.id }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.sku }}</td>
+                <td>₹{{ product.price }}</td>
+              </tr>
+            </tbody>
+
+          </table>
+        </div>
+      </div>
+
+    </ng-container>
+
+
+    <!-- INVENTORY -->
+    <ng-container *ngIf="activePage === 'Inventory'">
+
+      <div class="page-heading">
+        <div>
+          <span class="eyebrow">STOCK POSITION</span>
+          <h2>Inventory</h2>
+          <p>See available units by location and flag replenishment needs.</p>
+        </div>
+      </div>
+
+      <div class="panel inventory-panel">
+
+        <div class="inventory-toolbar">
+
+          <div class="inventory-tabs">
+            <button
+              type="button"
+              [class.active-tab]="inventoryMode === 'warehouse'"
+              (click)="inventoryMode = 'warehouse'">
+              By warehouse
+            </button>
+
+            <button
+              type="button"
+              [class.active-tab]="inventoryMode === 'lowstock'"
+              (click)="inventoryMode = 'lowstock'">
+              Low-stock report
+              <span class="count-badge">{{ lowStock.length }}</span>
+            </button>
+          </div>
+
+          <div
+            class="location-select"
+            *ngIf="inventoryMode === 'warehouse'">
+
+            <label>LOCATION</label>
+
+            <select
+              [(ngModel)]="selectedWarehouseId"
+              (ngModelChange)="selectWarehouse($event)"
+              name="selectedWarehouse">
+
+              <option value="">Choose a warehouse</option>
+
+              <option
+                *ngFor="let warehouse of warehouses"
+                [value]="warehouse.id">
+
+                {{ warehouse.name }}
+
+              </option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+
+        <!-- WAREHOUSE INVENTORY -->
+
+        <ng-container *ngIf="inventoryMode === 'warehouse'">
+
+          <div
+            class="inventory-empty"
+            *ngIf="!selectedWarehouseId">
+
+            <div class="empty-icon">▣</div>
+            <strong>Choose a warehouse</strong>
+            <span>Select a location above to view its inventory.</span>
+
+          </div>
+
+
+          <div
+            class="table-wrap"
+            *ngIf="selectedWarehouseId">
+
+            <table>
+
+              <thead>
+                <tr>
+                  <th>PRODUCT</th>
+                  <th>SKU</th>
+                  <th>WAREHOUSE</th>
+                  <th>AVAILABLE</th>
+                  <th>REORDER AT</th>
+                  <th>LAST UPDATED</th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                <tr *ngFor="let item of selectedInventory">
+
+                  <td>
+                    <div class="inventory-product">
+                      <strong>{{ getProductName(item.product?.id) }}</strong>
+                      <span>{{ item.product?.category || 'Product' }}</span>
+                    </div>
+                  </td>
+
+                  <td>{{ item.product?.sku || '—' }}</td>
+
+                  <td>
+                    {{ getWarehouseName(item.warehouse?.id) }}
+                  </td>
+
+                  <td>
+                    <span
+                      class="quantity-badge"
+                      [class.low-quantity]="
+                        item.quantity < (item.product?.reorderLevel || 0)
+                      ">
+
+                      {{ item.quantity }} units
+
+                    </span>
+                  </td>
+
+                  <td>
+                    {{ item.product?.reorderLevel || 0 }} units
+                  </td>
+
+                  <td>
+                    {{ item.lastUpdated | date:'MMM d, y · h:mm a' }}
+                  </td>
+
+                </tr>
+
+              </tbody>
+
+            </table>
+
+
+            <div
+              class="inventory-empty"
+              *ngIf="selectedInventory.length === 0">
+
+              <strong>No inventory found</strong>
+              <span>This warehouse currently has no inventory records.</span>
+
+            </div>
+
+          </div>
+
+        </ng-container>
+
+
+        <!-- LOW STOCK REPORT -->
+
+        <ng-container *ngIf="inventoryMode === 'lowstock'">
+
+          <div
+            class="inventory-empty"
+            *ngIf="lowStock.length === 0">
+
+            <div class="empty-icon success-icon">✓</div>
+            <strong>All products are well stocked!</strong>
+            <span>No low-stock products at the moment.</span>
+
+          </div>
+
+
+          <div
+            class="table-wrap"
+            *ngIf="lowStock.length > 0">
+
+            <table>
+
+              <thead>
+                <tr>
+                  <th>PRODUCT</th>
+                  <th>SKU</th>
+                  <th>WAREHOUSE</th>
+                  <th>AVAILABLE</th>
+                  <th>REORDER AT</th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                <tr *ngFor="let item of lowStock">
+
+                  <td>
+                    <div class="inventory-product">
+                      <strong>{{ getProductName(item.product?.id) }}</strong>
+                      <span>{{ item.product?.category || 'Product' }}</span>
+                    </div>
+                  </td>
+
+                  <td>{{ item.product?.sku || '—' }}</td>
+
+                  <td>
+                    {{ getWarehouseName(item.warehouse?.id) }}
+                  </td>
+
+                  <td>
+                    <span class="quantity-badge low-quantity">
+                      {{ item.quantity }} units
+                    </span>
+                  </td>
+
+                  <td>
+                    {{ item.product?.reorderLevel || 0 }} units
+                  </td>
+
+                </tr>
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </ng-container>
+
+      </div>
+
+
+      <!-- TRANSFER STOCK -->
+
+      <div class="panel">
+
+        <h2>Transfer Stock</h2>
+
+        <form class="action-form" (ngSubmit)="transferStock()">
+
+          <select
+            [(ngModel)]="transferForm.productId"
+            name="productId"
+            required>
+
+            <option value="">Select Product</option>
+
+            <option
+              *ngFor="let product of products"
+              [value]="product.id">
+
+              {{ product.name }}
+
+            </option>
+
+          </select>
+
+
+          <select
+            [(ngModel)]="transferForm.sourceWarehouseId"
+            name="sourceWarehouseId"
+            required>
+
+            <option value="">Source Warehouse</option>
+
+            <option
+              *ngFor="let warehouse of warehouses"
+              [value]="warehouse.id">
+
+              {{ warehouse.name }}
+
+            </option>
+
+          </select>
+
+
+          <select
+            [(ngModel)]="transferForm.destinationWarehouseId"
+            name="destinationWarehouseId"
+            required>
+
+            <option value="">Destination Warehouse</option>
+
+            <option
+              *ngFor="let warehouse of warehouses"
+              [value]="warehouse.id">
+
+              {{ warehouse.name }}
+
+            </option>
+
+          </select>
+
+
+          <input
+            type="number"
+            min="1"
+            [(ngModel)]="transferForm.quantity"
+            name="quantity"
+            required>
+
+          <button type="submit">
+            Transfer Stock
+          </button>
+
+        </form>
+
+      </div>
+
+    </ng-container>
+
+
+    <!-- ORDERS -->
+    <ng-container *ngIf="activePage === 'Orders'">
+
+      <div class="panel">
+
+        <h2>Create Order</h2>
+
+        <form class="action-form" (ngSubmit)="createOrder()">
+
+          <input
+            type="text"
+            placeholder="Order Number"
+            [(ngModel)]="orderForm.orderNumber"
+            name="orderNumber"
+            required>
+
+          <input
+            type="text"
+            placeholder="Customer Name"
+            [(ngModel)]="orderForm.customerName"
+            name="customerName"
+            required>
+
+
+          <select
+            [(ngModel)]="orderForm.productId"
+            name="orderProduct"
+            required>
+
+            <option value="">Select Product</option>
+
+            <option
+              *ngFor="let product of products"
+              [value]="product.id">
+
+              {{ product.name }}
+
+            </option>
+
+          </select>
+
+
+          <select
+            [(ngModel)]="orderForm.warehouseId"
+            name="orderWarehouse"
+            required>
+
+            <option value="">Select Warehouse</option>
+
+            <option
+              *ngFor="let warehouse of warehouses"
+              [value]="warehouse.id">
+
+              {{ warehouse.name }}
+
+            </option>
+
+          </select>
+
+
+          <input
+            type="number"
+            min="1"
+            [(ngModel)]="orderForm.quantity"
+            name="orderQuantity"
+            required>
+
+          <button type="submit">
+            Create Order
+          </button>
+
+        </form>
+
+      </div>
+
+
+      <div class="panel">
+
+        <h2>Orders</h2>
+
+        <div class="table-wrap">
+
+          <table>
+
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Order Number</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Update Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              <tr *ngFor="let order of orders">
+
+                <td>{{ order.id }}</td>
+
+                <td>{{ order.orderNumber }}</td>
+
+                <td>{{ order.customerName }}</td>
+
+                <td>
+                  <span
+                    class="order-status"
+                    [ngClass]="order.status?.toLowerCase()">
+
+                    {{ order.status }}
+
+                  </span>
+                </td>
+
+
+                <td>
+
+                  <div class="status-action">
+
+                    <select
+                      [(ngModel)]="statusForm[order.id]"
+                      [name]="'status' + order.id">
+
+                      <option value="PENDING">PENDING</option>
+                      <option value="CONFIRMED">CONFIRMED</option>
+                      <option value="SHIPPED">SHIPPED</option>
+                      <option value="DELIVERED">DELIVERED</option>
+                      <option value="CANCELLED">CANCELLED</option>
+
+                    </select>
+
+                    <button
+                      class="small-btn"
+                      (click)="updateOrderStatus(order.id)">
+
+                      Update
+
+                    </button>
+
+                  </div>
+
+                </td>
+
+
+                <td>
+
+                  <button
+                    *ngIf="
+                      order.status !== 'CANCELLED' &&
+                      order.status !== 'DELIVERED'
+                    "
+                    class="cancel-btn"
+                    (click)="cancelOrder(order.id)">
+
+                    Cancel
+
+                  </button>
+
+                </td>
+
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </ng-container>
+
+
+    <!-- SUPPLIERS -->
+    <ng-container *ngIf="activePage === 'Suppliers'">
+
+      <div class="panel">
+
+        <h2>Suppliers</h2>
+
+        <div class="table-wrap">
+
+          <table>
+
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              <tr *ngFor="let supplier of suppliers">
+
+                <td>{{ supplier.id }}</td>
+                <td>{{ supplier.name }}</td>
+                <td>{{ supplier.email }}</td>
+                <td>{{ supplier.phone }}</td>
+
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </ng-container>
+
+
+    <!-- WAREHOUSES -->
+    <ng-container *ngIf="activePage === 'Warehouses'">
+
+      <div class="panel">
+
+        <h2>Warehouses</h2>
+
+        <div class="table-wrap">
+
+          <table>
+
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Location</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              <tr *ngFor="let warehouse of warehouses">
+
+                <td>{{ warehouse.id }}</td>
+                <td>{{ warehouse.name }}</td>
+                <td>{{ warehouse.location }}</td>
+
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+    </ng-container>
+
+  </main>
+
+</div>
