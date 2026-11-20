@@ -1,0 +1,8 @@
+@echo off
+set "PROJECT_DIR=F:\Hcl_Project\inventory_retail_restored (1)\inventory_retail_restored"
+
+start "Backend" cmd /k "cd /d ""%PROJECT_DIR%"" && call mvnw.cmd spring-boot:run"
+
+start "Frontend" cmd /k "cd /d ""%PROJECT_DIR%\frontend-angular"" && npm start"
+
+exit

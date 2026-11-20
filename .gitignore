@@ -1,0 +1,32 @@
+# Java and Maven
+target/
+**/target/
+*.log
+
+# Angular
+**/node_modules/
+**/dist/
+**/.angular/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+application-local.properties
+
+# IDE files
+.idea/
+
+# VS Code
+.vscode/
+
+# Java compiled files
+*.class
+*.jar
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python (if applicable)
+__pycache__/

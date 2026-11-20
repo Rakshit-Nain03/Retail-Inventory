@@ -1,0 +1,13 @@
+RESTORED BASELINE
+
+This package restores the original monolithic Angular frontend (app.ts + app.html) and the tracked backend source from the repository's initial commit. It removes reliance on the newer modular Stockroom dashboard components that were showing zero values.
+
+The Inventory page is returned to its earlier behavior: it loads inventory for warehouse ID 1 (Central Warehouse). The database is not deleted or reset.
+
+Run from this folder:
+Terminal 1: Set-ExecutionPolicy -Scope Process Bypass; .\run-backend.ps1
+Terminal 2: Set-ExecutionPolicy -Scope Process Bypass; .\run-frontend.ps1
+Frontend: http://localhost:4200
+Backend products check: http://localhost:8080/api/products
+
+Ensure src/main/resources/application.properties has the correct local MySQL credentials.
